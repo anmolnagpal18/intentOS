@@ -6,6 +6,7 @@ const IntentList = ({
   generatingIntentId,
   onGenerateSchedule,
   schedulingIntentId,
+  onDeleteIntent,
 }) => {
   if (intents.length === 0) {
     return (
@@ -59,6 +60,13 @@ const IntentList = ({
               className="text-xs bg-purple-50 dark:bg-purple-950/45 text-purple-600 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 border border-purple-200/40 dark:border-purple-800/30 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>📅</span> {schedulingIntentId === intent.id ? 'Scheduling...' : 'Generate Schedule'}
+            </button>
+            <button
+              type="button"
+              onClick={() => onDeleteIntent(intent)}
+              className="text-xs bg-red-50 dark:bg-red-950/45 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200/40 dark:border-red-800/30 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer"
+            >
+              <span>🗑️</span> Delete
             </button>
           </div>
         </article>

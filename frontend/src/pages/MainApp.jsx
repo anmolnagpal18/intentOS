@@ -116,6 +116,22 @@ export default function MainApp() {
     }
   };
 
+  const handleDeleteIntent = async (intent) => {
+    if (!window.confirm(`Are you sure you want to delete "${intent.title}"? This will also remove all associated tasks.`)) return;
+    try {
+      await api.delete(`intents/${intent.id}/`);
+      setIntents((prev) => prev.filter((i) => i.id !== intent.id));
+      if (selectedIntent?.id === intent.id) {
+        setSelectedIntent(null);
+      }
+      setTaskRefreshKey((currentKey) => currentKey + 1);
+    } catch (error) {
+      console.error('Error deleting intent:', error);
+      alert('Failed to delete intent. Please try again.');
+    }
+  };
+
+
   return (
     <div className="flex bg-gray-50 min-h-screen">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -177,6 +193,7 @@ export default function MainApp() {
                   generatingIntentId={generatingIntentId}
                   onGenerateSchedule={handleGenerateSchedule}
                   schedulingIntentId={schedulingIntentId}
+                  onDeleteIntent={handleDeleteIntent}
                 />
                 <TaskPanel
                   intent={selectedIntent}
