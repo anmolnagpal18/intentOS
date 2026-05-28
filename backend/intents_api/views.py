@@ -145,11 +145,20 @@ class TeamViewSet(viewsets.ModelViewSet):
     serializer_class = TeamSerializer
     
     def get_queryset(self):
-        return Team.objects.filter(memberships__user=self.request.user).distinct()
+        # Only return teams where the user is an accepted member
+        return Team.objects.filter(
+            memberships__user=self.request.user,
+            memberships__status=TeamMembership.Status.ACCEPTED
+        ).distinct()
 
     def perform_create(self, serializer):
         team = serializer.save(owner=self.request.user)
-        TeamMembership.objects.create(user=self.request.user, team=team, role=TeamMembership.Role.OWNER)
+        TeamMembership.objects.create(
+            user=self.request.user, 
+            team=team, 
+            role=TeamMembership.Role.OWNER,
+            status=TeamMembership.Status.ACCEPTED
+        )
 
     @action(detail=True, methods=['post'], url_path='invite')
     def invite(self, request, pk=None):
@@ -171,7 +180,25 @@ class TeamViewSet(viewsets.ModelViewSet):
             return Response({'error': 'User is already a member.'}, status=status.HTTP_400_BAD_REQUEST)
             
         role = request.data.get('role', TeamMembership.Role.MEMBER)
-        TeamMembership.objects.create(user=user_to_invite, team=team, role=role)
+        pending_membership = TeamMembership.objects.create(
+            user=user_to_invite, 
+            team=team, 
+            role=role,
+            status=TeamMembership.Status.PENDING
+        )
+        
+        # Trigger an interactive invitation notification!
+        Notification.objects.create(
+            user=user_to_invite,
+            title="Team Invitation",
+            message=f"You have been invited by {request.user.username} to join the team '{team.name}'.",
+            type=Notification.NotificationType.TEAM_INVITE,
+            metadata={
+                'team_id': team.id,
+                'team_name': team.name,
+                'invited_by': request.user.username
+            }
+        )
         return Response({'message': 'User invited successfully.'}, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['get'], url_path='members')
@@ -179,6 +206,82 @@ class TeamViewSet(viewsets.ModelViewSet):
         team = self.get_object()
         memberships = TeamMembership.objects.filter(team=team)
         return Response(TeamMembershipSerializer(memberships, many=True).data)
+
+    @action(detail=True, methods=['post'], url_path='accept-invite')
+    def accept_invite(self, request, pk=None):
+        try:
+            team = Team.objects.get(pk=pk)
+        except Team.DoesNotExist:
+            return Response({'error': 'Team not found.'}, status=status.HTTP_404_NOT_FOUND)
+            
+        membership = TeamMembership.objects.filter(
+            user=request.user, 
+            team=team, 
+            status=TeamMembership.Status.PENDING
+        ).first()
+        
+        if not membership:
+            return Response({'error': 'No pending invitation found for this team.'}, status=status.HTTP_404_NOT_FOUND)
+            
+        membership.status = TeamMembership.Status.ACCEPTED
+        membership.save()
+        
+        # Mark invitation notification as read
+        Notification.objects.filter(
+            user=request.user,
+            type=Notification.NotificationType.TEAM_INVITE,
+            metadata__team_id=team.id
+        ).update(is_read=True)
+        
+        return Response({'message': 'Invitation accepted successfully.'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='decline-invite')
+    def decline_invite(self, request, pk=None):
+        try:
+            team = Team.objects.get(pk=pk)
+        except Team.DoesNotExist:
+            return Response({'error': 'Team not found.'}, status=status.HTTP_404_NOT_FOUND)
+            
+        membership = TeamMembership.objects.filter(
+            user=request.user, 
+            team=team, 
+            status=TeamMembership.Status.PENDING
+        ).first()
+        
+        if not membership:
+            return Response({'error': 'No pending invitation found for this team.'}, status=status.HTTP_404_NOT_FOUND)
+            
+        membership.delete()
+        
+        # Mark invitation notification as read
+        Notification.objects.filter(
+            user=request.user,
+            type=Notification.NotificationType.TEAM_INVITE,
+            metadata__team_id=team.id
+        ).update(is_read=True)
+        
+        return Response({'message': 'Invitation declined successfully.'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='remove-member')
+    def remove_member(self, request, pk=None):
+        team = self.get_object()
+        membership = TeamMembership.objects.filter(user=request.user, team=team).first()
+        if not membership or membership.role not in [TeamMembership.Role.OWNER, TeamMembership.Role.ADMIN]:
+            return Response({'error': 'You do not have permission to remove members.'}, status=status.HTTP_403_FORBIDDEN)
+            
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'error': 'User ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        member_to_remove = TeamMembership.objects.filter(user_id=user_id, team=team).first()
+        if not member_to_remove:
+            return Response({'error': 'Member not found.'}, status=status.HTTP_404_NOT_FOUND)
+            
+        if member_to_remove.role == TeamMembership.Role.OWNER:
+            return Response({'error': 'Cannot remove the team owner.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        member_to_remove.delete()
+        return Response({'message': 'Member removed successfully.'}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='assign-task')
     def assign_task(self, request, pk=None):

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, UserPlus, Users, Activity } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users, Activity, Clock } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import IntentForm from './IntentForm';
 import IntentList from './IntentList';
@@ -13,6 +14,8 @@ export default function TeamDashboard({ team, onBack }) {
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState('');
   const [activeTab, setActiveTab] = useState('workflows'); // 'workflows' or 'members'
+  const { user: currentUser } = useAuth();
+  const isOwner = team.owner === currentUser?.id || team.owner_username === currentUser?.username;
   
   // States for shared intents
   const [intents, setIntents] = useState([]);
@@ -42,8 +45,9 @@ export default function TeamDashboard({ team, onBack }) {
       const tasksInTeam = response.data.filter(t => teamIntentsIds.includes(t.intent));
       
       const counts = {};
-      // Seed with all current members
-      members.forEach(m => {
+      // Seed with all current active members
+      const activeMembers = members.filter(m => m.status !== 'pending');
+      activeMembers.forEach(m => {
         counts[m.username] = { completed: 0, total: 0 };
       });
 
@@ -89,6 +93,18 @@ export default function TeamDashboard({ team, onBack }) {
       console.error('Error fetching members:', error);
     } finally {
       setLoadingMembers(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberId) => {
+    if (!window.confirm("Are you sure you want to remove this member from the team?")) return;
+    try {
+      await api.post(`teams/${team.id}/remove-member/`, { user_id: memberId });
+      setMembers(prev => prev.filter(m => m.user !== memberId));
+      setInviteSuccess('Member removed successfully.');
+    } catch (error) {
+      console.error('Error removing member:', error);
+      setInviteError(error.response?.data?.error || 'Failed to remove member.');
     }
   };
 
@@ -252,23 +268,43 @@ export default function TeamDashboard({ team, onBack }) {
                   <div className="text-gray-500 text-center py-4">Loading members...</div>
                 ) : (
                   <div className="space-y-4">
-                    {members.map(member => (
-                      <div key={member.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
-                            {member.username.charAt(0).toUpperCase()}
+                    {members.map(member => {
+                      const isPending = member.status === 'pending';
+                      const isMemberOwner = member.role === 'owner';
+                      return (
+                        <div key={member.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800/40 rounded-lg border border-gray-100 dark:border-slate-800/80">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-950/45 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold">
+                              {member.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900 dark:text-white">{member.username}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">{member.role}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-gray-900">{member.username}</p>
-                            <p className="text-xs text-gray-500 uppercase tracking-wider">{member.role}</p>
+                          <div className="flex items-center space-x-3 text-sm text-gray-500">
+                            {isPending ? (
+                              <span className="text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border border-amber-200/40 dark:border-amber-800/20 px-2.5 py-1 rounded-full flex items-center font-semibold">
+                                <Clock className="w-3.5 h-3.5 mr-1" /> Pending
+                              </span>
+                            ) : (
+                              <span className="text-xs bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/40 dark:border-emerald-800/20 px-2.5 py-1 rounded-full flex items-center font-semibold">
+                                <Activity className="w-3.5 h-3.5 mr-1" /> Active
+                              </span>
+                            )}
+                            {isOwner && !isMemberOwner && (
+                              <button
+                                onClick={() => handleRemoveMember(member.user)}
+                                className="text-xs text-red-500 hover:text-red-700 font-bold p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 transition cursor-pointer"
+                                title="Remove member"
+                              >
+                                Remove
+                              </button>
+                            )}
                           </div>
                         </div>
-                        <div className="text-sm text-gray-500 flex items-center">
-                          <Activity className="w-4 h-4 mr-1 text-emerald-500" />
-                          Active
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -330,9 +366,14 @@ export default function TeamDashboard({ team, onBack }) {
                             </div>
                             <div className="flex-1 min-w-0 pt-1.5 flex justify-between space-x-4">
                               <div>
-                                <p className="text-xs text-gray-700 font-medium">
-                                  {log.event_type_display}{" "}
-                                  <span className="font-semibold text-indigo-600">
+                                <p className="text-xs text-gray-700 dark:text-gray-200 font-medium">
+                                  <span className="font-semibold text-indigo-600 dark:text-indigo-400 mr-1">
+                                    {log.username || 'Someone'}
+                                  </span>
+                                  {log.event_type === 'task_completed' ? 'completed' : 
+                                   log.event_type === 'task_created' ? 'created task' : 
+                                   log.event_type === 'task_deleted' ? 'deleted task' : 'created'}{" "}
+                                  <span className="font-semibold text-gray-800 dark:text-gray-100">
                                     {log.task_title || log.intent_title}
                                   </span>
                                 </p>

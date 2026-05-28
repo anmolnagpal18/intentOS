@@ -16,9 +16,15 @@ class TeamMembership(models.Model):
         ADMIN = 'admin', 'Admin'
         MEMBER = 'member', 'Member'
 
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        ACCEPTED = 'accepted', 'Accepted'
+        DECLINED = 'declined', 'Declined'
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='team_memberships')
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='memberships')
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.MEMBER)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -38,7 +44,7 @@ class Intent(models.Model):
         is_new = self.pk is None
         super().save(*args, **kwargs)
         if is_new:
-            ActivityLog.objects.create(event_type=ActivityLog.EventType.INTENT_CREATED, related_intent=self)
+            ActivityLog.objects.create(event_type=ActivityLog.EventType.INTENT_CREATED, related_intent=self, user=self.user)
 
     def __str__(self):
         return self.title
@@ -77,15 +83,16 @@ class Task(models.Model):
         super().save(*args, **kwargs)
         
         if is_new:
-            ActivityLog.objects.create(event_type=ActivityLog.EventType.TASK_CREATED, related_task=self, related_intent=self.intent)
+            ActivityLog.objects.create(event_type=ActivityLog.EventType.TASK_CREATED, related_task=self, related_intent=self.intent, user=self.assigned_to or self.intent.user)
         elif old_status and old_status != self.status and self.status == self.Status.COMPLETED:
-            ActivityLog.objects.create(event_type=ActivityLog.EventType.TASK_COMPLETED, related_task=self, related_intent=self.intent)
+            ActivityLog.objects.create(event_type=ActivityLog.EventType.TASK_COMPLETED, related_task=self, related_intent=self.intent, user=self.assigned_to or self.intent.user)
 
     def delete(self, *args, **kwargs):
         # We need to save the intent before deletion since self.intent will be unavailable
         intent = self.intent
+        assigned_user = self.assigned_to
         super().delete(*args, **kwargs)
-        ActivityLog.objects.create(event_type=ActivityLog.EventType.TASK_DELETED, related_intent=intent)
+        ActivityLog.objects.create(event_type=ActivityLog.EventType.TASK_DELETED, related_intent=intent, user=assigned_user or intent.user)
 
     def __str__(self):
         return self.title
@@ -101,6 +108,7 @@ class ActivityLog(models.Model):
     event_type = models.CharField(max_length=50, choices=EventType.choices)
     related_intent = models.ForeignKey(Intent, on_delete=models.SET_NULL, null=True, blank=True, related_name='activity_logs')
     related_task = models.ForeignKey(Task, on_delete=models.SET_NULL, null=True, blank=True, related_name='activity_logs')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='activity_logs')
     timestamp = models.DateTimeField(auto_now_add=True)
     metadata = models.JSONField(null=True, blank=True)
 
@@ -115,11 +123,13 @@ class Notification(models.Model):
         ADAPTATION_UPDATE = 'adaptation_update', 'Adaptation Update'
         STREAK_ALERT = 'streak_alert', 'Streak Alert'
         DAILY_SUMMARY = 'daily_summary', 'Daily Summary'
+        TEAM_INVITE = 'team_invite', 'Team Invitation'
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     title = models.CharField(max_length=255)
     message = models.TextField()
     type = models.CharField(max_length=50, choices=NotificationType.choices)
+    metadata = models.JSONField(null=True, blank=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

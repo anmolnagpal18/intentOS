@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Check, Trash2, X } from 'lucide-react';
-import { notificationsAPI } from '../services/api';
+import api, { notificationsAPI } from '../services/api';
 import { useWebSocketContext } from '../contexts/WebSocketContext';
 
 const NotificationPanel = () => {
@@ -32,6 +32,37 @@ const NotificationPanel = () => {
       fetchNotifications();
     }
   }, [latestMessage]);
+
+  const handleAcceptInvite = async (notification) => {
+    const teamId = notification.metadata?.team_id;
+    if (!teamId) return;
+    try {
+      await api.post(`teams/${teamId}/accept-invite/`);
+      setNotifications(notifications.map(n => 
+        n.id === notification.id ? { ...n, is_read: true, message: 'Joined team!' } : n
+      ));
+      setUnreadCount(Math.max(0, unreadCount - 1));
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to accept invitation:', error);
+      alert('Failed to accept invitation.');
+    }
+  };
+
+  const handleDeclineInvite = async (notification) => {
+    const teamId = notification.metadata?.team_id;
+    if (!teamId) return;
+    try {
+      await api.post(`teams/${teamId}/decline-invite/`);
+      setNotifications(notifications.map(n => 
+        n.id === notification.id ? { ...n, is_read: true, message: 'Declined invitation.' } : n
+      ));
+      setUnreadCount(Math.max(0, unreadCount - 1));
+    } catch (error) {
+      console.error('Failed to decline invitation:', error);
+      alert('Failed to decline invitation.');
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -143,6 +174,22 @@ const NotificationPanel = () => {
                       <p className="text-sm text-gray-500 mt-1 line-clamp-2">
                         {notification.message}
                       </p>
+                      {notification.type === 'team_invite' && !notification.is_read && (
+                        <div className="flex space-x-2 mt-3.5">
+                          <button
+                            onClick={() => handleAcceptInvite(notification)}
+                            className="bg-indigo-600 hover:bg-indigo-750 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleDeclineInvite(notification)}
+                            className="bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200/50 dark:border-slate-700 transition-colors cursor-pointer"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      )}
                       <p className="text-xs text-gray-400 mt-1">
                         {new Date(notification.created_at).toLocaleString()}
                       </p>

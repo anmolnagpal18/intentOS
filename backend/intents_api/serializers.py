@@ -10,6 +10,7 @@ class NotificationSerializer(serializers.ModelSerializer):
             'title',
             'message',
             'type',
+            'metadata',
             'is_read',
             'created_at'
         ]
@@ -48,7 +49,7 @@ class TeamMembershipSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = TeamMembership
-        fields = ['id', 'user', 'username', 'team', 'role', 'joined_at']
+        fields = ['id', 'user', 'username', 'team', 'role', 'status', 'joined_at']
         read_only_fields = ['id', 'joined_at']
 
 
@@ -91,6 +92,7 @@ class ActivityLogSerializer(serializers.ModelSerializer):
     event_type_display = serializers.CharField(source='get_event_type_display', read_only=True)
     intent_title = serializers.CharField(source='related_intent.title', read_only=True, allow_null=True)
     task_title = serializers.CharField(source='related_task.title', read_only=True, allow_null=True)
+    username = serializers.CharField(source='user.username', read_only=True, allow_null=True)
 
     class Meta:
         model = ActivityLog
@@ -103,6 +105,7 @@ class ActivityLogSerializer(serializers.ModelSerializer):
             'related_task',
             'task_title',
             'timestamp',
-            'metadata'
+            'metadata',
+            'username'
         ]
         read_only_fields = ['id', 'timestamp']
