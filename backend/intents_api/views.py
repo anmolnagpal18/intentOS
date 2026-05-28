@@ -16,6 +16,7 @@ from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 import random
 import string
+import secrets
 
 
 class AIEngineViewSet(viewsets.ViewSet):
@@ -115,7 +116,7 @@ class AuthViewSet(viewsets.ViewSet):
             try:
                 user = User.objects.get(email=email)
             except User.DoesNotExist:
-                random_password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+                random_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
                 base_username = email.split('@')[0]
                 username = base_username
                 counter = 1

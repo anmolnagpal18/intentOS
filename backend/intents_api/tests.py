@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 
 class TaskApiTests(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='testuser', password='password')
+        self.user = User.objects.create_user(username='testuser', password='password')  # nosec
         self.client.force_authenticate(user=self.user)
         self.intent = Intent.objects.create(title='Launch project', user=self.user)
         self.other_intent = Intent.objects.create(title='Plan week', user=self.user)
