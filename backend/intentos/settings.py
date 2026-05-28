@@ -139,6 +139,16 @@ else:
 # Add CORS settings for frontend connection
 CORS_ALLOW_ALL_ORIGINS = True # Allow Vercel frontend to connect without issues
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.onrender.com',
+    'https://*.vercel.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+]
+
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
