@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+# Django/local runtime
+*.sqlite3
+db.sqlite3
+*.log
+.env
+.env.*
+!.env.example
+
+# Node/frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Editors/OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  display: block;
+  min-width: 100vw;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Glassmorphic Cards */
+.glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+/* Dark Mode Theme Mapping */
+.dark body {
+  background-color: #0b0f19;
+  color: #f1f5f9;
+}
+
+.dark .bg-white {
+  background-color: #131a26 !important;
+  color: #f3f4f6 !important;
+}
+
+.dark .border-gray-100,
+.dark .border-gray-150,
+.dark .border-gray-200 {
+  border-color: #222d3d !important;
+}
+
+.dark .text-gray-900,
+.dark .text-gray-800 {
+  color: #f9fafb !important;
+}
+
+.dark .text-gray-500,
+.dark .text-gray-600 {
+  color: #9ca3af !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: #1b2431 !important;
+  color: #f3f4f6 !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #273346 !important;
+  color: #f3f4f6 !important;
+}
+
+.dark .bg-indigo-50 {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+  color: #c7d2fe !important;
+}
+
+.dark .text-indigo-800 {
+  color: #e0e7ff !important;
+}
+
+.dark .glass-card {
+  background: rgba(19, 26, 38, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark select,
+.dark input,
+.dark textarea {
+  background-color: #1b2431 !important;
+  border-color: #2d3b4f !important;
+  color: #f9fafb !important;
+}
+
+.dark select option {
+  background-color: #131a26 !important;
+  color: #f9fafb !important;
+}
