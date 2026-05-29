@@ -33,9 +33,29 @@ const NotificationPanel = () => {
     }
   }, [latestMessage]);
 
+  const getTeamId = (notification) => {
+    let metadata = notification.metadata;
+    if (!metadata) {
+      console.warn('No metadata field found in notification:', notification);
+      return null;
+    }
+    if (typeof metadata === 'string') {
+      try {
+        metadata = JSON.parse(metadata);
+      } catch (e) {
+        console.error('Failed to parse metadata string:', e, metadata);
+        return null;
+      }
+    }
+    return metadata.team_id || metadata.teamId;
+  };
+
   const handleAcceptInvite = async (notification) => {
-    const teamId = notification.metadata?.team_id;
-    if (!teamId) return;
+    const teamId = getTeamId(notification);
+    if (!teamId) {
+      alert('Could not accept invitation: Team ID not found in notification metadata.');
+      return;
+    }
     try {
       await api.post(`teams/${teamId}/accept-invite/`);
       setNotifications(notifications.map(n => 
@@ -50,8 +70,11 @@ const NotificationPanel = () => {
   };
 
   const handleDeclineInvite = async (notification) => {
-    const teamId = notification.metadata?.team_id;
-    if (!teamId) return;
+    const teamId = getTeamId(notification);
+    if (!teamId) {
+      alert('Could not decline invitation: Team ID not found in notification metadata.');
+      return;
+    }
     try {
       await api.post(`teams/${teamId}/decline-invite/`);
       setNotifications(notifications.map(n => 
