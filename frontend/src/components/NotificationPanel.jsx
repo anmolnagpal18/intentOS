@@ -7,7 +7,13 @@ const NotificationPanel = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [toast, setToast] = useState(null);
   const dropdownRef = useRef(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -53,37 +59,51 @@ const NotificationPanel = () => {
   const handleAcceptInvite = async (notification) => {
     const teamId = getTeamId(notification);
     if (!teamId) {
-      alert('Could not accept invitation: Team ID not found in notification metadata.');
+      showToast('Could not accept invitation: Team ID not found in notification metadata.', 'error');
       return;
     }
     try {
       await api.post(`teams/${teamId}/accept-invite/`);
-      setNotifications(notifications.map(n => 
-        n.id === notification.id ? { ...n, is_read: true, message: 'Joined team!' } : n
-      ));
-      setUnreadCount(Math.max(0, unreadCount - 1));
-      window.location.reload();
+      
+      const remainingNotifications = notifications.filter(n => n.id !== notification.id);
+      setNotifications(remainingNotifications);
+      setUnreadCount(remainingNotifications.filter(n => !n.is_read).length);
+      
+      showToast('Invitation accepted successfully.', 'success');
+      
+      // Dispatch custom event to tell TeamWorkspace to reload team dashboard dynamically
+      window.dispatchEvent(new CustomEvent('refresh-teams'));
+
+      if (remainingNotifications.length === 0) {
+        setIsOpen(false);
+      }
     } catch (error) {
       console.error('Failed to accept invitation:', error);
-      alert('Failed to accept invitation.');
+      showToast('Failed to accept invitation.', 'error');
     }
   };
 
   const handleDeclineInvite = async (notification) => {
     const teamId = getTeamId(notification);
     if (!teamId) {
-      alert('Could not decline invitation: Team ID not found in notification metadata.');
+      showToast('Could not decline invitation: Team ID not found in notification metadata.', 'error');
       return;
     }
     try {
       await api.post(`teams/${teamId}/decline-invite/`);
-      setNotifications(notifications.map(n => 
-        n.id === notification.id ? { ...n, is_read: true, message: 'Declined invitation.' } : n
-      ));
-      setUnreadCount(Math.max(0, unreadCount - 1));
+      
+      const remainingNotifications = notifications.filter(n => n.id !== notification.id);
+      setNotifications(remainingNotifications);
+      setUnreadCount(remainingNotifications.filter(n => !n.is_read).length);
+      
+      showToast('Invitation declined.', 'success');
+
+      if (remainingNotifications.length === 0) {
+        setIsOpen(false);
+      }
     } catch (error) {
       console.error('Failed to decline invitation:', error);
-      alert('Failed to decline invitation.');
+      showToast('Failed to decline invitation.', 'error');
     }
   };
 
@@ -243,6 +263,13 @@ const NotificationPanel = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+      
+      {toast && (
+        <div className={`fixed top-5 right-5 text-white px-5 py-3 rounded-xl shadow-2xl z-[9999] flex items-center gap-3 animate-fade-in border backdrop-blur-md transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500 border-red-400/20' : 'bg-emerald-500 border-emerald-400/20'}`}>
+          {toast.type === 'error' ? <X className="w-5 h-5 flex-shrink-0" /> : <Check className="w-5 h-5 flex-shrink-0" />}
+          <span className="text-sm font-semibold">{toast.message}</span>
         </div>
       )}
     </div>

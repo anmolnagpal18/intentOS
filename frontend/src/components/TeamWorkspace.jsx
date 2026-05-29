@@ -15,6 +15,13 @@ export default function TeamWorkspace() {
 
   useEffect(() => {
     fetchTeams();
+
+    const handleRefreshTeams = () => {
+      fetchTeams();
+    };
+
+    window.addEventListener('refresh-teams', handleRefreshTeams);
+    return () => window.removeEventListener('refresh-teams', handleRefreshTeams);
   }, []);
 
   const fetchTeams = async () => {
