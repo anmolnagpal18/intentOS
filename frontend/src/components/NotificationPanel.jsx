@@ -93,8 +93,8 @@ const NotificationPanel = () => {
         setIsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
   const handleMarkAsRead = async (id) => {
@@ -143,7 +143,10 @@ const NotificationPanel = () => {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
         className="relative p-2 text-gray-500 hover:text-gray-700 focus:outline-none transition-colors rounded-full hover:bg-gray-100"
       >
         <Bell className="w-6 h-6" />
@@ -156,7 +159,7 @@ const NotificationPanel = () => {
 
       {isOpen && (
         <div 
-          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl overflow-hidden z-50 border border-gray-100 transform transition-all duration-200 origin-top-right"
         >
           <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
