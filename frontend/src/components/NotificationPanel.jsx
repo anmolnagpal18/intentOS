@@ -132,7 +132,10 @@ const NotificationPanel = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl overflow-hidden z-50 border border-gray-100 transform transition-all duration-200 origin-top-right">
+        <div 
+          onMouseDown={(e) => e.stopPropagation()}
+          className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl overflow-hidden z-50 border border-gray-100 transform transition-all duration-200 origin-top-right"
+        >
           <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
             <h3 className="font-bold text-gray-800">Notifications</h3>
             <div className="flex space-x-2">
@@ -177,13 +180,19 @@ const NotificationPanel = () => {
                       {notification.type === 'team_invite' && !notification.is_read && (
                         <div className="flex space-x-2 mt-3.5">
                           <button
-                            onClick={() => handleAcceptInvite(notification)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAcceptInvite(notification);
+                            }}
                             className="bg-indigo-600 hover:bg-indigo-750 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                           >
                             Accept
                           </button>
                           <button
-                            onClick={() => handleDeclineInvite(notification)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeclineInvite(notification);
+                            }}
                             className="bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200/50 dark:border-slate-700 transition-colors cursor-pointer"
                           >
                             Decline
